@@ -61,11 +61,7 @@ public class AuthController {
         authService.logoutAll(logoutRequest);
         return ResponseEntity.noContent().build();
     }
-    // test
-    @GetMapping("/test")
-    public String test() {
-        return "Protected";
-    }
+    // test for RBAC
     @GetMapping("/user")
     @PreAuthorize("hasRole('USER')")
     public String user() {
