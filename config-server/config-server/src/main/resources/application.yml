@@ -8,7 +8,7 @@ spring:
         git:
           uri:  https://github.com/iRahmanG/incident-management-config-repo.git
           username: iRahmanG
-          password: ${GIT_REPO_PASSWORD}
+          password:
           default-label: main
           clone-on-start: true
 
