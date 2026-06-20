@@ -55,7 +55,33 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             return exchange.getResponse().setComplete();
         }
 
-        return chain.filter(exchange);
+        String userId = jwtUtil.extractUserId(token);
+        String email = jwtUtil.extractEmail(token);
+        String role = jwtUtil.extractRole(token);
+
+        var mutatedRequest = exchange.getRequest()
+                .mutate()
+
+                // Remove potentially spoofed headers
+                .headers(headers -> {
+                    headers.remove("X-User-Id");
+                    headers.remove("X-User-Email");
+                    headers.remove("X-User-Role");
+                })
+
+                // Add trusted headers
+                .header("X-User-Id", userId)
+                .header("X-User-Email", email)
+                .header("X-User-Role", role)
+
+                .build();
+
+        ServerWebExchange mutatedExchange = exchange
+                .mutate()
+                .request(mutatedRequest)
+                .build();
+
+        return chain.filter(mutatedExchange);
     }
 
     @Override
