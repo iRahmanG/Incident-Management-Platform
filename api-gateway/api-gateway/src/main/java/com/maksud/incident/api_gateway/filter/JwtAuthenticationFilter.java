@@ -77,6 +77,17 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         String email = jwtUtil.extractEmail(token);
         String role = jwtUtil.extractRole(token);
 
+        if (!isAuthorized(path,
+                exchange.getRequest().getMethod().name(),
+                role)) {
+
+            return writeErrorResponse(
+                    exchange,
+                    HttpStatus.FORBIDDEN,
+                    "Access denied"
+            );
+        }
+
         var mutatedRequest = exchange.getRequest()
                 .mutate()
                 .headers(headers -> {
@@ -129,6 +140,34 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         } catch (Exception e) {
             return exchange.getResponse().setComplete();
         }
+    }
+
+    private boolean isAuthorized(
+            String path,
+            String method,
+            String role
+    ) {
+
+        if (path.matches("/api/v1/incidents/.*/assign")) {
+            return role.equals("ADMIN")
+                    || role.equals("SUPER_ADMIN");
+        }
+
+        if (path.matches("/api/v1/incidents/.*/close")) {
+            return role.equals("ADMIN")
+                    || role.equals("SUPER_ADMIN");
+        }
+
+        if (path.matches("/api/v1/incidents/.*/reopen")) {
+            return role.equals("ADMIN")
+                    || role.equals("SUPER_ADMIN");
+        }
+        if (path.matches("/api/v1/incidents/.*/severity")) {
+            return "ADMIN".equals(role)
+                    || "SUPER_ADMIN".equals(role);
+        }
+
+        return true;
     }
 
     @Override
