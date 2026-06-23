@@ -6,6 +6,7 @@ import com.maksud.incident.incident_service.dto.IncidentResponse;
 import com.maksud.incident.incident_service.security.AuthenticatedUser;
 import com.maksud.incident.incident_service.security.UserContext;
 import com.maksud.incident.incident_service.service.IncidentService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.query.Page;
@@ -34,6 +35,11 @@ public class IncidentController {
     public ResponseEntity<IncidentResponse> assignIncident(@PathVariable UUID id, @RequestBody @Valid AssignIncidentRequest request){
         IncidentResponse response = incidentService.assignIncident(id,request.engineerId());
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{id}/acknowledge")
+    public ResponseEntity<IncidentResponse> acknowledge(@PathVariable UUID id, HttpServletRequest request){
+
     }
 
 //    @GetMapping
