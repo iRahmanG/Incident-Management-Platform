@@ -11,7 +11,6 @@ import com.maksud.incident.incident_service.exception.IncidentNotFoundException;
 import com.maksud.incident.incident_service.mapper.IncidentMapper;
 import com.maksud.incident.incident_service.repository.IncidentRepository;
 import com.maksud.incident.incident_service.security.UserContext;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -96,6 +95,34 @@ public class IncidentServiceImpl implements IncidentService{
 
         Incident saved = incidentRepository.save(incident);
 
+        return incidentMapper.toResponse(saved);
+    }
+
+    @Override
+    public IncidentResponse resolveIncident(UUID incidentId, UUID currentUserId, String resolutionSummary) throws AccessDeniedException {
+        Incident incident  = incidentRepository.findById(incidentId).orElseThrow(() ->
+                new IncidentNotFoundException("Incident not found with id " + incidentId)
+        );
+        if (incident.getAssignedTo() == null){
+            throw new IllegalStateException("Incident must be assigned before resolving");
+        }
+        if(!incident.getAssignedTo().equals(currentUserId)){
+            throw new AccessDeniedException("Only assigned engineer can resolve the incident");
+        }
+        if(!incident.getStatus().equals(IncidentStatus.IN_PROGRESS)){
+            throw new IllegalStateException("Only IN_PROGRESS incidents can be resolved");
+        }
+        if(resolutionSummary == null || resolutionSummary.isBlank()){
+            throw new IllegalArgumentException(
+                    "Resolution summary is required"
+            );
+        }
+        incident.setStatus(IncidentStatus.RESOLVED);
+        incident.setResolvedAt(LocalDateTime.now());
+        incident.setUpdatedAt(LocalDateTime.now());
+        incident.setResolutionSummary(resolutionSummary);
+
+        Incident saved = incidentRepository.save(incident);
         return incidentMapper.toResponse(saved);
     }
 

@@ -32,4 +32,5 @@ public class Incident {
     private UUID assignedTo;
     private LocalDateTime updatedAt;
     private LocalDateTime resolvedAt;
+    private String resolutionSummary;
 }

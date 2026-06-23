@@ -3,17 +3,17 @@ package com.maksud.incident.incident_service.controller;
 import com.maksud.incident.incident_service.dto.AssignIncidentRequest;
 import com.maksud.incident.incident_service.dto.CreateIncidentRequest;
 import com.maksud.incident.incident_service.dto.IncidentResponse;
+import com.maksud.incident.incident_service.dto.ResolveIncidentRequest;
 import com.maksud.incident.incident_service.security.AuthenticatedUser;
 import com.maksud.incident.incident_service.security.UserContext;
 import com.maksud.incident.incident_service.service.IncidentService;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.query.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.file.AccessDeniedException;
 import java.util.UUID;
 
 @RestController
@@ -38,13 +38,17 @@ public class IncidentController {
     }
 
     @PutMapping("/{id}/acknowledge")
-    public ResponseEntity<IncidentResponse> acknowledge(@PathVariable UUID id, HttpServletRequest request){
-
+    public ResponseEntity<IncidentResponse> acknowledge(@PathVariable UUID id) throws AccessDeniedException {
+        AuthenticatedUser user = userContext.getCurrentUser();
+        IncidentResponse response  = incidentService.acknowledgeIncident(id, user.userId());
+        return ResponseEntity.ok(response);
     }
 
-//    @GetMapping
-//    public ResponseEntity<Page<IncidentResponse>> getAllIncidents(
-//            @RequestParam(defaultValue = "0") int page,
-//            @RequestParam(defaultValue = "20") int size
-//    ){}
+    @PutMapping("/{id}/resolve")
+    public ResponseEntity<IncidentResponse> resolveIncident(@PathVariable UUID id, @RequestBody ResolveIncidentRequest request) throws AccessDeniedException {
+        AuthenticatedUser user = userContext.getCurrentUser();
+        IncidentResponse response = incidentService.resolveIncident(id, user.userId(), request.resolutionSummary());
+        return ResponseEntity.ok(response);
+    }
+
 }
