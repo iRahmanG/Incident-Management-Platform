@@ -3,12 +3,11 @@ package com.maksud.incident.incident_service.service;
 import com.maksud.incident.incident_service.dto.CreateIncidentRequest;
 import com.maksud.incident.incident_service.dto.IncidentResponse;
 import com.maksud.incident.incident_service.dto.IncidentSummaryResponse;
-import com.maksud.incident.incident_service.repository.IncidentRepository;
-import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
+import com.maksud.incident.incident_service.entity.Incident;
+import com.maksud.incident.incident_service.entity.IncidentSeverity;
+import com.maksud.incident.incident_service.entity.IncidentStatus;
 import org.springframework.data.domain.Page;
-import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Pageable;
 
 import java.nio.file.AccessDeniedException;
 import java.util.UUID;
@@ -27,7 +26,8 @@ public interface IncidentService {
 
     IncidentResponse reopenIncident(UUID incidentId, String reopenSummary);
 
-    Page<IncidentSummaryResponse> getAllIncidents(int page, int size);
+    Page<IncidentSummaryResponse> getAllIncidents(int page, int size, IncidentStatus status, IncidentSeverity severity);
 
     IncidentResponse getIncidentById(UUID incidentId);
+
 }

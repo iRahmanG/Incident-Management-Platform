@@ -1,6 +1,8 @@
 package com.maksud.incident.incident_service.controller;
 
 import com.maksud.incident.incident_service.dto.*;
+import com.maksud.incident.incident_service.entity.IncidentSeverity;
+import com.maksud.incident.incident_service.entity.IncidentStatus;
 import com.maksud.incident.incident_service.security.AuthenticatedUser;
 import com.maksud.incident.incident_service.security.UserContext;
 import com.maksud.incident.incident_service.service.IncidentService;
@@ -34,9 +36,11 @@ public class IncidentController {
     @GetMapping
     public ResponseEntity<Page<IncidentSummaryResponse>> getAllIncidents(
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
-    ) {
-        Page<IncidentSummaryResponse> incidents = incidentService.getAllIncidents(page, size);
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+            @RequestParam(required = false)IncidentStatus status,
+            @RequestParam(required = false)IncidentSeverity severity
+            ) {
+        Page<IncidentSummaryResponse> incidents = incidentService.getAllIncidents(page, size, status, severity);
         return ResponseEntity.ok(incidents);
     }
 

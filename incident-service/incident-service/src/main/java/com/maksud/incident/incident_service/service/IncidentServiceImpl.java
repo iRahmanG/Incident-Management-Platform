@@ -136,7 +136,7 @@ public class IncidentServiceImpl implements IncidentService{
                 new IncidentNotFoundException("Incident not found with id: " + incidentId)
         );
         if(incident.getStatus() != IncidentStatus.RESOLVED) {
-            throw new IllegalStateException("Only RESOLVED incident can be Closed");
+            throw new IllegalStateException("Only RESOLVED incident can be closed");
         }
         if(closureSummary == null || closureSummary.isBlank()){
             throw new IllegalArgumentException("Closure summary is required");
@@ -157,7 +157,7 @@ public class IncidentServiceImpl implements IncidentService{
                 );
 
         if(incident.getStatus() != IncidentStatus.RESOLVED && incident.getStatus() != IncidentStatus.CLOSED) {
-            throw new IllegalStateException("Only Resolved or closed incident can be reopen");
+            throw new IllegalStateException("Only RESOLVED or CLOSED incidents can be reopened");
         }
         if(reopenSummary == null || reopenSummary.isBlank()){
             throw  new IllegalArgumentException("Reopen summary is required");
@@ -172,14 +172,32 @@ public class IncidentServiceImpl implements IncidentService{
     }
 
     @Override
-    public Page<IncidentSummaryResponse> getAllIncidents(int page, int size) {
+    public Page<IncidentSummaryResponse> getAllIncidents(int page, int size, IncidentStatus status, IncidentSeverity severity) {
         Pageable pageable = PageRequest.of(
                 page,
                 size,
                 Sort.by("createdAt").descending()
         );
-        return incidentRepository.findAll(pageable)
+        // No filters
+        if(status == null && severity == null){
+            return incidentRepository.findAll(pageable)
+                    .map(incidentMapper::toSummaryResponse);
+        }
+        // Status only
+        if(status!=null && severity == null){
+            return incidentRepository.findByStatus(status, pageable)
+                    .map(incidentMapper::toSummaryResponse);
+        }
+        // Severity Only
+        if (status == null) {
+            return incidentRepository.findByIncidentSeverity(severity, pageable)
+                    .map(incidentMapper::toSummaryResponse);
+        }
+        // Status + Severity
+        return incidentRepository
+                .findByStatusAndIncidentSeverity(status, severity, pageable)
                 .map(incidentMapper::toSummaryResponse);
+
     }
 
     @Override

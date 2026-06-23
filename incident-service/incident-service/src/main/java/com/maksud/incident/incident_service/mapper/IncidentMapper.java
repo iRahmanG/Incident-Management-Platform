@@ -22,6 +22,11 @@ public class IncidentMapper {
                 .assignedTo(incident.getAssignedTo())
                 .createdAt(incident.getCreatedAt())
                 .updatedAt(incident.getUpdatedAt())
+                .resolvedAt(incident.getResolvedAt())
+                .closedAt(incident.getClosedAt())
+                .resolutionSummary(incident.getResolutionSummary())
+                .closureSummary(incident.getClosureSummary())
+                .reopenSummary(incident.getReopenSummary())
                 .build();
     }
 
