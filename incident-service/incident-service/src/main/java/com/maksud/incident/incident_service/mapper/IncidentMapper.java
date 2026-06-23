@@ -1,6 +1,7 @@
 package com.maksud.incident.incident_service.mapper;
 
 import com.maksud.incident.incident_service.dto.IncidentResponse;
+import com.maksud.incident.incident_service.dto.IncidentSummaryResponse;
 import com.maksud.incident.incident_service.entity.Incident;
 import org.springframework.stereotype.Component;
 
@@ -21,6 +22,17 @@ public class IncidentMapper {
                 .assignedTo(incident.getAssignedTo())
                 .createdAt(incident.getCreatedAt())
                 .updatedAt(incident.getUpdatedAt())
+                .build();
+    }
+
+    public IncidentSummaryResponse toSummaryResponse(Incident incident){
+        return IncidentSummaryResponse.builder()
+                .id(incident.getId())
+                .title(incident.getTitle())
+                .severity(incident.getIncidentSeverity().name())
+                .status(incident.getStatus().name())
+                .assignedTo(incident.getAssignedTo())
+                .createdAt(incident.getCreatedAt())
                 .build();
     }
 }

@@ -2,6 +2,7 @@ package com.maksud.incident.incident_service.service;
 
 import com.maksud.incident.incident_service.dto.CreateIncidentRequest;
 import com.maksud.incident.incident_service.dto.IncidentResponse;
+import com.maksud.incident.incident_service.dto.IncidentSummaryResponse;
 import com.maksud.incident.incident_service.entity.Incident;
 import com.maksud.incident.incident_service.entity.IncidentSeverity;
 import com.maksud.incident.incident_service.entity.IncidentSource;
@@ -11,6 +12,10 @@ import com.maksud.incident.incident_service.mapper.IncidentMapper;
 import com.maksud.incident.incident_service.repository.IncidentRepository;
 import com.maksud.incident.incident_service.security.UserContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.AccessDeniedException;
@@ -164,5 +169,24 @@ public class IncidentServiceImpl implements IncidentService{
 
         Incident saved = incidentRepository.save(incident);
         return incidentMapper.toResponse(saved);
+    }
+
+    @Override
+    public Page<IncidentSummaryResponse> getAllIncidents(int page, int size) {
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by("createdAt").descending()
+        );
+        return incidentRepository.findAll(pageable)
+                .map(incidentMapper::toSummaryResponse);
+    }
+
+    @Override
+    public IncidentResponse getIncidentById(UUID incidentId) {
+        Incident incident = incidentRepository.findById(incidentId).orElseThrow(() ->
+                new IncidentNotFoundException("Incident not found with id: " + incidentId)
+                );
+        return incidentMapper.toResponse(incident);
     }
 }

@@ -1,7 +1,4 @@
 package com.maksud.incident.incident_service.dto;
-
-import com.maksud.incident.incident_service.entity.IncidentSeverity;
-import com.maksud.incident.incident_service.entity.IncidentSource;
 import lombok.Builder;
 
 import java.time.LocalDateTime;
@@ -18,5 +15,11 @@ public record IncidentResponse(
         UUID createdBy,
         UUID assignedTo,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+
+        LocalDateTime resolvedAt,
+        LocalDateTime closedAt,
+        String resolutionSummary,
+        String closureSummary,
+        String reopenSummary
 ) {}
