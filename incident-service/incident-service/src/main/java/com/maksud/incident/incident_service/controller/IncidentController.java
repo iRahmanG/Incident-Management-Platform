@@ -1,9 +1,6 @@
 package com.maksud.incident.incident_service.controller;
 
-import com.maksud.incident.incident_service.dto.AssignIncidentRequest;
-import com.maksud.incident.incident_service.dto.CreateIncidentRequest;
-import com.maksud.incident.incident_service.dto.IncidentResponse;
-import com.maksud.incident.incident_service.dto.ResolveIncidentRequest;
+import com.maksud.incident.incident_service.dto.*;
 import com.maksud.incident.incident_service.security.AuthenticatedUser;
 import com.maksud.incident.incident_service.security.UserContext;
 import com.maksud.incident.incident_service.service.IncidentService;
@@ -48,6 +45,18 @@ public class IncidentController {
     public ResponseEntity<IncidentResponse> resolveIncident(@PathVariable UUID id, @RequestBody ResolveIncidentRequest request) throws AccessDeniedException {
         AuthenticatedUser user = userContext.getCurrentUser();
         IncidentResponse response = incidentService.resolveIncident(id, user.userId(), request.resolutionSummary());
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{id}/close")
+    public ResponseEntity<IncidentResponse> closeIncident(@PathVariable UUID id, @RequestBody CloseIncidentRequest request){
+        IncidentResponse response = incidentService.closeIncident(id, request.closureSummary());
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{id}/reopen")
+    public ResponseEntity<IncidentResponse> reopenIncident(@PathVariable UUID id, @RequestBody ReopenIncidentRequest request){
+        IncidentResponse response = incidentService.reopenIncident(id, request.reason());
         return ResponseEntity.ok(response);
     }
 

@@ -14,8 +14,14 @@ import java.util.UUID;
 public interface IncidentService {
 
     IncidentResponse createIncident(CreateIncidentRequest request, UUID createdBy);
+
     IncidentResponse assignIncident(UUID incidentId, UUID userId);
+
     IncidentResponse acknowledgeIncident(UUID incidentId, UUID currentUserId) throws AccessDeniedException;
 
     IncidentResponse resolveIncident(UUID incidentId, UUID currentUserId, String resolutionSummary) throws AccessDeniedException;
+
+    IncidentResponse closeIncident(UUID incidentId, String closureSummary);
+
+    IncidentResponse reopenIncident(UUID incidentId, String reopenSummary);
 }

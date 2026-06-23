@@ -6,7 +6,6 @@ import com.maksud.incident.incident_service.entity.Incident;
 import com.maksud.incident.incident_service.entity.IncidentSeverity;
 import com.maksud.incident.incident_service.entity.IncidentSource;
 import com.maksud.incident.incident_service.entity.IncidentStatus;
-import com.maksud.incident.incident_service.exception.IncidentNotAssignedException;
 import com.maksud.incident.incident_service.exception.IncidentNotFoundException;
 import com.maksud.incident.incident_service.mapper.IncidentMapper;
 import com.maksud.incident.incident_service.repository.IncidentRepository;
@@ -126,4 +125,44 @@ public class IncidentServiceImpl implements IncidentService{
         return incidentMapper.toResponse(saved);
     }
 
+    @Override
+    public IncidentResponse closeIncident(UUID incidentId, String closureSummary) {
+        Incident incident = incidentRepository.findById(incidentId).orElseThrow(() ->
+                new IncidentNotFoundException("Incident not found with id: " + incidentId)
+        );
+        if(incident.getStatus() != IncidentStatus.RESOLVED) {
+            throw new IllegalStateException("Only RESOLVED incident can be Closed");
+        }
+        if(closureSummary == null || closureSummary.isBlank()){
+            throw new IllegalArgumentException("Closure summary is required");
+        }
+        incident.setStatus(IncidentStatus.CLOSED);
+        incident.setClosureSummary(closureSummary);
+        incident.setAssignedTo(null);
+        incident.setClosedAt(LocalDateTime.now());
+        incident.setUpdatedAt(LocalDateTime.now());
+        Incident saved = incidentRepository.save(incident);
+        return incidentMapper.toResponse(saved);
+    }
+
+    @Override
+    public IncidentResponse reopenIncident(UUID incidentId, String reopenSummary) {
+        Incident incident = incidentRepository.findById(incidentId).orElseThrow(() ->
+                new IncidentNotFoundException("Incident not found with id: " + incidentId)
+                );
+
+        if(incident.getStatus() != IncidentStatus.RESOLVED && incident.getStatus() != IncidentStatus.CLOSED) {
+            throw new IllegalStateException("Only Resolved or closed incident can be reopen");
+        }
+        if(reopenSummary == null || reopenSummary.isBlank()){
+            throw  new IllegalArgumentException("Reopen summary is required");
+        }
+        incident.setStatus(IncidentStatus.REOPENED);
+        incident.setReopenSummary(reopenSummary);
+        incident.setAssignedTo(null);
+        incident.setUpdatedAt(LocalDateTime.now());
+
+        Incident saved = incidentRepository.save(incident);
+        return incidentMapper.toResponse(saved);
+    }
 }
