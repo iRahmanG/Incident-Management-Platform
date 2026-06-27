@@ -1,6 +1,7 @@
 package com.maksud.incident.incident_service.service;
 
 import com.maksud.incident.incident_service.dto.CreateIncidentRequest;
+import com.maksud.incident.incident_service.dto.IncidentEvent;
 import com.maksud.incident.incident_service.dto.IncidentResponse;
 import com.maksud.incident.incident_service.dto.IncidentSummaryResponse;
 import com.maksud.incident.incident_service.entity.Incident;
@@ -30,6 +31,7 @@ public class IncidentServiceImpl implements IncidentService{
     private final IncidentRepository incidentRepository;
     private final IncidentMapper incidentMapper;
     private final UserContext userContext;
+    private final KafkaProducerService producer;
 
     @Override
     public IncidentResponse createIncident(CreateIncidentRequest request, UUID createdBy) {
@@ -49,6 +51,19 @@ public class IncidentServiceImpl implements IncidentService{
                 .build();
 
         Incident saved = incidentRepository.save(incident);
+        producer.publish(
+                IncidentEvent.builder()
+                        .eventType("INCIDENT_CREATED")
+                        .incidentId(saved.getId())
+                        .title(saved.getTitle())
+                        .status(saved.getStatus().name())
+                        .severity(saved.getIncidentSeverity().name())
+                        .createdBy(saved.getCreatedBy())
+                        .assignedTo(saved.getAssignedTo())
+                        .occurredAt(saved.getCreatedAt())
+                        .build()
+
+        );
         return incidentMapper.toResponse(saved);
     }
 
