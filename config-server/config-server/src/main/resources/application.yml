@@ -7,11 +7,10 @@ spring:
       server:
         git:
           uri:  https://github.com/iRahmanG/incident-management-config-repo.git
-          username: iRahmanG
-          password: ${GITHUB_TOKEN}
+          username: "${GIT-USERNAME}"
+          password: "${GIT_TOKEN}"
           default-label: main
           clone-on-start: true
-
 
 server:
   port: 8888
