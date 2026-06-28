@@ -28,6 +28,12 @@ public class Notification {
     @Column(nullable = false)
     private NotificationEventType eventType;
 
+    @Column(nullable = false)
+    private String title;
+
+    @Column(nullable = false)
+    private Boolean isRead;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private NotificationStatus status;

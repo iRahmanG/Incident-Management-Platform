@@ -1,13 +1,18 @@
 package com.maksud.incident.notification_service.listener;
 
 import com.maksud.incident.notification_service.event.IncidentEvent;
+import com.maksud.incident.notification_service.service.NotificationService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class IncidentEventListener {
+
+    private final NotificationService notificationService;
 
     @KafkaListener(
             topics = "incident-events",
@@ -16,9 +21,7 @@ public class IncidentEventListener {
     public void consume(IncidentEvent event){
         log.info("Received Incident Event");
 
-        log.info("Type       : {}", event.getEventType());
-        log.info("IncidentId : {}", event.getIncidentId());
-        log.info("Title      : {}", event.getTitle());
-        log.info("Severity   : {}", event.getSeverity());
+        notificationService.saveNotification(event);
+        log.info("Notification stored successfully");
     }
 }

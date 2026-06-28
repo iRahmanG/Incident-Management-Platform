@@ -5,6 +5,7 @@ import com.maksud.incident.notification_service.dto.NotificationSummaryResponse;
 import com.maksud.incident.notification_service.entity.Notification;
 import com.maksud.incident.notification_service.entity.NotificationEventType;
 import com.maksud.incident.notification_service.entity.NotificationStatus;
+import com.maksud.incident.notification_service.event.IncidentEvent;
 import com.maksud.incident.notification_service.exception.NotificationNotFoundException;
 import com.maksud.incident.notification_service.mapper.NotificationMapper;
 import com.maksud.incident.notification_service.repository.NotificationRepository;
@@ -15,7 +16,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
+
 
 @Service
 @RequiredArgsConstructor
@@ -58,5 +61,41 @@ public class NotificationServiceImpl implements NotificationService{
                         new NotificationNotFoundException("Notification not found with id: " + id)
                 );
         return notificationMapper.toResponse(notification);
+    }
+
+    @Override
+    public Notification saveNotification(IncidentEvent event) {
+        Notification notification = Notification.builder()
+                .id(UUID.randomUUID())
+                .incidentId(event.getIncidentId())
+                .recipientEmail("admin@incident.com")
+                .eventType(NotificationEventType.valueOf(event.getEventType()))
+                .title(event.getTitle())
+                .subject("Incident " + event.getEventType())
+                .message(buildMessage(event))
+                .status(NotificationStatus.PENDING)
+                .retryCount(0)
+                .errorMessage(null)
+                .isRead(false)
+                .createdAt(LocalDateTime.now())
+                .sentAt(null)
+                .build();
+
+        return notificationRepository.save(notification);
+    }
+
+    private String buildMessage(IncidentEvent event) {
+        return """
+            Incident Id : %s
+            Title       : %s
+            Severity    : %s
+            Event       : %s
+            """
+                .formatted(
+                        event.getIncidentId(),
+                        event.getTitle(),
+                        event.getSeverity(),
+                        event.getEventType()
+                );
     }
 }

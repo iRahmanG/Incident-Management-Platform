@@ -1,6 +1,7 @@
 package com.maksud.incident.notification_service.entity;
 
 public enum NotificationEventType {
+    INCIDENT_CREATED,
     INCIDENT_ASSIGNED,
     INCIDENT_RESOLVED,
     INCIDENT_CLOSED,
