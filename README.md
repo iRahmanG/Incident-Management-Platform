@@ -166,24 +166,30 @@ Notification Processor->>Fake Email Service: Send Notification
 ```mermaid
 flowchart LR
 
-    A[Client]
-    B[Incident Service]
-    C[(Incident DB)]
-    D["Kafka Topic<br/>incident-events"]
+    Client --> Incident
 
-    E[Notification Service]
-    F[(Notification DB)]
-    G[Notification Processor]
-    H[Fake Email Service]
+    subgraph Incident Service
+        Incident[Create Incident]
+        DB1[(Incident DB)]
+        KafkaPub[Publish Event]
+        Incident --> DB1
+        Incident --> KafkaPub
+    end
 
-    A --> B
-    B --> C
-    B --> D
+    KafkaPub --> Kafka["Kafka Topic<br/>incident-events"]
 
-    D --> E
-    E --> F
-    F --> G
-    G --> H
+    Kafka --> Consumer
+
+    subgraph Notification Service
+        Consumer[Consume Event]
+        DB2[(Notification DB)]
+        Scheduler[Notification Processor]
+        Email[Fake Email Service]
+
+        Consumer --> DB2
+        DB2 --> Scheduler
+        Scheduler --> Email
+    end
 ```
 
 ---
