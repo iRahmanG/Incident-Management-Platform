@@ -1,5 +1,6 @@
 package com.maksud.incident.notification_service.service;
 
+import com.maksud.incident.notification_service.constants.NotificationConstants;
 import com.maksud.incident.notification_service.email.EmailService;
 import com.maksud.incident.notification_service.entity.Notification;
 import com.maksud.incident.notification_service.entity.NotificationStatus;
@@ -39,11 +40,29 @@ public class NotificationProcessor {
                 notificationRepository.save(notification);
 
                 log.info("Notification {} marked as SENT", notification.getId());
-            } catch (Exception e){
-                notification.setStatus(NotificationStatus.FAILED);
-                notification.setRetryCount(notification.getRetryCount() + 1);
-                notification.setErrorMessage(e.getMessage());
 
+            } catch (Exception e){
+                notification.setRetryCount(notification.getRetryCount() + 1);
+
+                // Retry
+                if(notification.getRetryCount() >= NotificationConstants.MAX_RETRY_COUNT){
+                    notification.setStatus(NotificationStatus.FAILED);
+                    log.error(
+                            "Notification {} permanently failed after {} retries.",
+                            notification.getId(),
+                            NotificationConstants.MAX_RETRY_COUNT
+                    );
+                }else {
+                    notification.setStatus(NotificationStatus.PENDING);
+                    log.warn(
+                            "Notification {} failed. Retry {}/{}",
+                            notification.getId(),
+                            notification.getRetryCount(),
+                            NotificationConstants.MAX_RETRY_COUNT
+                    );
+                }
+
+                notification.setErrorMessage(e.getMessage());
                 notificationRepository.save(notification);
                 log.error("Notification {} failed", notification.getId());
             }
