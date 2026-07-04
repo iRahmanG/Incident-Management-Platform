@@ -49,8 +49,7 @@ public class NotificationProcessor {
                     notification.setStatus(NotificationStatus.FAILED);
                     log.error(
                             "Notification {} permanently failed after {} retries.",
-                            notification.getId(),
-                            NotificationConstants.MAX_RETRY_COUNT
+                            notification.getId(), NotificationConstants.MAX_RETRY_COUNT
                     );
                 }else {
                     notification.setStatus(NotificationStatus.PENDING);
@@ -61,10 +60,8 @@ public class NotificationProcessor {
                             NotificationConstants.MAX_RETRY_COUNT
                     );
                 }
-
                 notification.setErrorMessage(e.getMessage());
                 notificationRepository.save(notification);
-                log.error("Notification {} failed", notification.getId());
             }
         }
     }

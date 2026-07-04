@@ -10,6 +10,7 @@ public class FakeEmailService implements EmailService{
 
     @Override
     public void send(Notification notification) {
+//        throw new RuntimeException("SMTP Server Down");
         log.info("========== EMAIL SENT ==========");
         log.info("To      : {}", notification.getRecipientEmail());
         log.info("Subject : {}", notification.getSubject());
