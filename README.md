@@ -54,6 +54,7 @@ This project is being developed to learn production-level backend development co
 |----------|-------------|
 | API Gateway | Routes all incoming requests |
 | Eureka Server | Service Discovery |
+| Config Server | Configurations    |
 | Auth Service | JWT Authentication |
 | Incident Service | Incident Management |
 | Notification Service | Kafka Consumer & Notification Processing |
@@ -162,53 +163,43 @@ Notification Processor->>Fake Email Service: Send Notification
 
 # Kafka Workflow
 
-```text
-Incident Created
+```mermaid
+flowchart LR
 
-        │
+    A[Client]
+    B[Incident Service]
+    C[(Incident DB)]
+    D["Kafka Topic<br/>incident-events"]
 
-        ▼
+    E[Notification Service]
+    F[(Notification DB)]
+    G[Notification Processor]
+    H[Fake Email Service]
 
-Kafka Topic
+    A --> B
+    B --> C
+    B --> D
 
-incident-events
-
-        │
-
-        ▼
-
-Notification Service
-
-        │
-
-        ▼
-
-Notification Saved
-
-        │
-
-        ▼
-
-Notification Processor
-
-        │
-
-        ▼
-
-Fake Email Service
+    D --> E
+    E --> F
+    F --> G
+    G --> H
 ```
 
 ---
 
 # Database
 
+### Auth Service
+- ```auth_db```
+
 ### Incident Service
 
-- Incidents
+- ```incident_db```
 
 ### Notification Service
 
-- Notifications
+- ```notification_db```
 
 ---
 
@@ -260,6 +251,7 @@ Incident-Management-Platform
 
 ├── api-gateway
 ├── auth-service
+├── config-server
 ├── eureka-server
 ├── incident-service
 ├── notification-service
@@ -314,7 +306,7 @@ Incident-Management-Platform
 ## Clone Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/iRahmanG/Incident-Management-Platform.git
 ```
 
 ## Start Infrastructure
@@ -344,7 +336,7 @@ The remaining work focuses on production-level backend engineering concepts such
 
 ---
 
-# Author
+## Author
 
 **Maksud Rahman**
 
