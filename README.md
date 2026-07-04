@@ -1,288 +1,351 @@
+<div align="center">
+
 # Incident Management Platform
 
-A backend project built using Spring Boot Microservices to learn how modern distributed systems are designed and developed.
+A microservices-based Incident Management Platform built using **Java**, **Spring Boot**, **Spring Cloud**, **Apache Kafka**, and **PostgreSQL**.
 
-The project is inspired by real-world incident management platforms used by software teams to track, assign, and resolve operational incidents. The main objective of this project is to gain hands-on experience with microservices, Spring Cloud, and production-oriented backend concepts.
+This project is being developed to learn production-level backend development concepts such as Microservices, Event-Driven Architecture, Distributed Systems, Caching, Resilience Patterns, Docker, Kubernetes, and CI/CD.
 
-> **Project Status:** In Progress
+</div>
 
 ---
 
-# Overview
+# Tech Stack
 
-This project simulates an incident management system where users can create, update, assign, and resolve incidents.
+## Backend
 
-Instead of building a simple CRUD application, the goal is to understand how multiple services communicate with each other and how components like API Gateway, Service Discovery, Config Server, and Fault Tolerance are used in a distributed system.
+- Java 21
+- Spring Boot 3
+- Spring Security
+- Spring Data JPA
+- Spring Validation
 
-As the project progresses, more production-grade features such as event-driven communication, caching, Docker, testing, monitoring, and CI/CD will be added.
+## Microservices
+
+- Spring Cloud Gateway
+- Eureka Service Discovery
+
+## Database
+
+- PostgreSQL
+
+## Messaging
+
+- Apache Kafka
+
+## Authentication
+
+- JWT Authentication
+
+## Build Tool
+
+- Maven
+
+## Version Control
+
+- Git
+- GitHub
+
+---
+
+# Microservices
+
+| Service | Description |
+|----------|-------------|
+| API Gateway | Routes all incoming requests |
+| Eureka Server | Service Discovery |
+| Auth Service | JWT Authentication |
+| Incident Service | Incident Management |
+| Notification Service | Kafka Consumer & Notification Processing |
 
 ---
 
 # Current Architecture
 
 ```mermaid
-flowchart TB
+flowchart TD
 
-    Client[Client]
-
-    Gateway[API Gateway]
-
-    Auth[Auth Service]
-    Incident[Incident Service]
-    Notification[Notification Service]
-
-    Eureka[Eureka Service Registry]
-    Config[Spring Cloud Config Server]
-
-    DB[(PostgreSQL)]
+    Client
 
     Client --> Gateway
 
     Gateway --> Auth
     Gateway --> Incident
+    Gateway --> Notification
 
-    Incident --> Notification
+    Incident --> PostgreSQL1[(Incident DB)]
 
-    Auth --> DB
-    Incident --> DB
+    Notification --> PostgreSQL2[(Notification DB)]
 
-    Gateway -. Registers & Discovers .-> Eureka
-    Auth -. Registers .-> Eureka
-    Incident -. Registers .-> Eureka
-    Notification -. Registers .-> Eureka
+    Incident --> Kafka
 
-    Gateway -. Loads Configuration .-> Config
-    Auth -. Loads Configuration .-> Config
-    Incident -. Loads Configuration .-> Config
-    Notification -. Loads Configuration .-> Config
+    Kafka --> Notification
+
+    Eureka --> Gateway
+    Eureka --> Auth
+    Eureka --> Incident
+    Eureka --> Notification
 ```
 
 ---
 
-# Request Flow
+# Event Flow
 
 ```mermaid
 sequenceDiagram
 
-    participant Client
-    participant Gateway
-    participant Incident
-    participant Database
-    participant Notification
+participant Client
+participant IncidentService
+participant Kafka
+participant NotificationService
 
-    Client->>Gateway: Create Incident
-    Gateway->>Incident: Forward Request
-    Incident->>Database: Save Incident
-    Database-->>Incident: Success
-    Incident->>Notification: Send Notification
-    Notification-->>Incident: Success
-    Incident-->>Gateway: Response
-    Gateway-->>Client: Incident Created
-```
+Client->>IncidentService: Create Incident
 
----
+IncidentService->>PostgreSQL: Save Incident
 
-# Planned Event Flow
+IncidentService->>Kafka: Publish Incident Event
 
-The Notification Service currently communicates directly with the Incident Service.
+Kafka->>NotificationService: Consume Event
 
-In the next phase, this will be replaced with Apache Kafka to achieve asynchronous communication.
+NotificationService->>PostgreSQL: Save Notification
 
-```mermaid
-flowchart LR
+NotificationService->>Notification Processor: Process Pending Notification
 
-    Client --> Gateway
-
-    Gateway --> Incident
-
-    Incident --> DB[(PostgreSQL)]
-
-    Incident -->|Publish Event| Kafka[(Apache Kafka)]
-
-    Kafka --> Notification
+Notification Processor->>Fake Email Service: Send Notification
 ```
 
 ---
 
 # Features Implemented
 
-## Authentication
+## API Gateway
+
+- Centralized Routing
+- Service Discovery Integration
+
+## Eureka Server
+
+- Dynamic Service Registration
+- Service Discovery
+
+## Authentication Service
 
 - User Registration
 - User Login
+- JWT Authentication
 - Password Encryption
-- Spring Security configuration
 
----
-
-## Incident Management
+## Incident Service
 
 - Create Incident
-- View Incident
 - Update Incident
-- Assign Incident
 - Resolve Incident
-- Incident Status Management
-
-### Incident Status
-
-- OPEN
-- IN_PROGRESS
-- RESOLVED
-- CLOSED
-- REOPEN
-
-### Priority Levels
-
-- P0
-- P1
-- P2
-- P3
-- P4
-
----
+- Close Incident
+- Reopen Incident
+- Pagination
+- DTO Mapping
+- Validation
+- Global Exception Handling
+- Kafka Producer
 
 ## Notification Service
 
-- Separate Notification Microservice
-- Notification endpoint integration with Incident Service
-- Microservice-to-microservice communication
+- Kafka Consumer
+- Event Processing
+- Notification Persistence
+- Background Scheduler
+- Fake Email Simulation
+- Notification APIs
+- Notification Status Tracking
 
 ---
+
+# Kafka Workflow
+
+```text
+Incident Created
+
+        │
+
+        ▼
+
+Kafka Topic
+
+incident-events
+
+        │
+
+        ▼
+
+Notification Service
+
+        │
+
+        ▼
+
+Notification Saved
+
+        │
+
+        ▼
+
+Notification Processor
+
+        │
+
+        ▼
+
+Fake Email Service
+```
+
+---
+
+# Database
+
+### Incident Service
+
+- Incidents
+
+### Notification Service
+
+- Notifications
+
+---
+
+# What I Learned
+
+## Spring Boot
+
+- Layered Architecture
+- DTO
+- Mapper
+- Validation
+- Exception Handling
+
+## Spring Security
+
+- JWT Authentication
+- Password Encryption
 
 ## Spring Cloud
 
 - API Gateway
-- Eureka Service Registry
-- Spring Cloud Config Server
-- OpenFeign Client
-- Centralized Configuration
-- Service Discovery
+- Eureka Service Discovery
 
----
+## Apache Kafka
 
-## Fault Tolerance
+- Producer
+- Consumer
+- Event-Driven Architecture
+- Asynchronous Communication
 
-Implemented using Resilience4j
+## Notification Processing
 
-- Circuit Breaker
-- Retry Mechanism
+- Background Scheduler
+- Notification Lifecycle
+- Event Processing
+
+## Database
+
+- Spring Data JPA
+- Relationships
+- Pagination
 
 ---
 
 # Project Structure
 
-```
-incident-management-platform
+```text
+Incident-Management-Platform
 
-│── api-gateway
-│── eureka-server
-│── config-server
-│
-│── auth-service
-│── incident-service
-│── notification-service
-│
-└── README.md
+├── api-gateway
+├── auth-service
+├── eureka-server
+├── incident-service
+├── notification-service
+└── docker
 ```
 
 ---
 
-# Technology Stack
+# APIs
 
-### Backend
+## Auth Service
 
-- Java
-- Spring Boot
-- Spring MVC
-- Spring Data JPA
-- Hibernate
+- Register User
+- Login User
 
-### Microservices
+## Incident Service
 
-- Spring Cloud Gateway
-- Eureka Server
-- Spring Cloud Config Server
-- OpenFeign
-- Resilience4j
+- Create Incident
+- Update Incident
+- Resolve Incident
+- Close Incident
+- Reopen Incident
+- Get Incident
+- Get All Incidents
 
-### Database
+## Notification Service
+
+- Get Notification
+- Get All Notifications
+
+---
+
+# Features Planned
+
+- Role Based Access Control (RBAC)
+- Retry Mechanism
+- Dead Letter Queue (DLQ)
+- Redis Caching
+- Circuit Breaker (Resilience4j)
+- Rate Limiting
+- Docker
+- Kubernetes
+- GitHub Actions CI/CD
+- Prometheus
+- Grafana
+- Production Deployment
+
+---
+
+# Running the Project
+
+## Clone Repository
+
+```bash
+git clone <repository-url>
+```
+
+## Start Infrastructure
 
 - PostgreSQL
+- Kafka
+- Eureka Server
 
-### Security
+## Run Services
 
-- Spring Security
-- JWT
-
-### Build Tool
-
-- Maven
-
----
-
-# Learning Objectives
-
-This project is part of my backend learning journey.
-
-Through this project I am learning:
-
-- Microservices Architecture
-- Service Discovery
-- API Gateway
-- Distributed Configuration
-- REST API Design
-- Inter-Service Communication
-- Fault Tolerance
-- Spring Security
-- Backend System Design
+1. Eureka Server
+2. API Gateway
+3. Auth Service
+4. Incident Service
+5. Notification Service
 
 ---
 
-# Planned Features
+# Current Status
 
-The following features will be implemented as I continue learning backend development.
+- Core Microservices Architecture Completed
+- Event-Driven Communication Completed
+- Authentication Completed
+- Notification Workflow Completed
 
-- JWT Authentication
-- Role-Based Access Control (RBAC)
-- Apache Kafka
-- Event-Driven Architecture
-- Redis Caching
-- Docker & Docker Compose
-- Unit Testing
-- Integration Testing
-- GitHub Actions
-- Monitoring using Spring Boot Actuator
-- Prometheus & Grafana
-- Email Notifications
-- Audit Logs
-- Dashboard & Analytics
-- Automatic Incident Detection
-
----
-
-# Future Improvements
-
-Some improvements planned for future versions include:
-
-- Replace synchronous service communication with Kafka
-- Cache frequently used data using Redis
-- Dockerize all microservices
-- Add CI/CD pipeline using GitHub Actions
-- Add monitoring and health checks
-- Deploy the project to cloud
-- Improve testing and code coverage
+The remaining work focuses on production-level backend engineering concepts such as resilience, caching, DevOps, monitoring, and deployment.
 
 ---
 
 # Author
 
-Maksud Rahman
+**Maksud Rahman**
 
-GitHub: https://github.com/iRahmanG
-
----
-
-# Note
-
-This project is still under active development. New features and improvements will continue to be added as I learn more about backend development and microservices.
+Backend Developer | Java | Spring Boot | Microservices
