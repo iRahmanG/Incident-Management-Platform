@@ -2,6 +2,7 @@ package com.maksud.incident.notification_service.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.maksud.incident.notification_service.constants.NotificationConstants;
+import com.maksud.incident.notification_service.constants.RedisConstants;
 import com.maksud.incident.notification_service.email.EmailService;
 import com.maksud.incident.notification_service.entity.Notification;
 import com.maksud.incident.notification_service.entity.NotificationStatus;
@@ -25,68 +26,103 @@ public class NotificationProcessor {
     private final EmailService emailService;
     private final ObjectMapper objectMapper;
     private final IncidentEventDlqProducer incidentEventDlqProducer;
+    private final RedisLockService redisLockService;
 
     @Scheduled(fixedDelay = 10000)
-    public void processPendingNotifications(){
-        List<Notification> pendingNotifications = notificationRepository
-                .findByStatus(NotificationStatus.PENDING);
+    public void processPendingNotifications() {
 
-        if(pendingNotifications.isEmpty()){
+        String ownerId = redisLockService.acquireLock(
+                RedisConstants.NOTIFICATION_LOCK,
+                RedisConstants.LOCK_TIMEOUT
+        );
+
+        if (ownerId == null) {
+            log.info("Another instance is processing notifications.");
             return;
         }
-        log.info("Found {} pending notifications", pendingNotifications.size());
 
-        for(Notification notification: pendingNotifications) {
-            try {
-                emailService.send(notification);
-                notification.setStatus(NotificationStatus.SENT);
-                notification.setSentAt(LocalDateTime.now());
+        try {
 
-                notificationRepository.save(notification);
+            List<Notification> pendingNotifications =
+                    notificationRepository.findByStatus(NotificationStatus.PENDING);
 
-                log.info("Notification {} marked as SENT", notification.getId());
+            if (pendingNotifications.isEmpty()) {
+                return;
+            }
 
-            } catch (Exception e){
-                notification.setRetryCount(notification.getRetryCount() + 1);
+            log.info("Found {} pending notifications", pendingNotifications.size());
 
-                // Retry
-                if(notification.getRetryCount() >= NotificationConstants.MAX_RETRY_COUNT){
-                    notification.setStatus(NotificationStatus.FAILED);
+            for (Notification notification : pendingNotifications) {
 
-                    try{
-                        IncidentEvent event = objectMapper.readValue(
-                                notification.getPayload(),
-                                IncidentEvent.class
-                        );
+                try {
 
-                        incidentEventDlqProducer.publish(event);
-                        log.warn(
-                                "Notification {} moved to DLQ",
-                                notification.getId()
-                        );
-                    } catch (Exception ex) {
+                    emailService.send(notification);
+
+                    notification.setStatus(NotificationStatus.SENT);
+                    notification.setSentAt(LocalDateTime.now());
+
+                    notificationRepository.save(notification);
+
+                    log.info("Notification {} marked as SENT", notification.getId());
+
+                } catch (Exception e) {
+
+                    notification.setRetryCount(notification.getRetryCount() + 1);
+
+                    if (notification.getRetryCount() >= NotificationConstants.MAX_RETRY_COUNT) {
+
+                        notification.setStatus(NotificationStatus.FAILED);
+
+                        try {
+
+                            IncidentEvent event = objectMapper.readValue(
+                                    notification.getPayload(),
+                                    IncidentEvent.class
+                            );
+
+                            incidentEventDlqProducer.publish(event);
+
+                            log.warn("Notification {} moved to DLQ", notification.getId());
+
+                        } catch (Exception ex) {
+
+                            log.error(
+                                    "Unable to publish notification {} to DLQ",
+                                    notification.getId(),
+                                    ex
+                            );
+                        }
+
                         log.error(
-                                "Unable to publish notification {} to DLQ",
+                                "Notification {} permanently failed after {} retries.",
                                 notification.getId(),
-                                ex
+                                NotificationConstants.MAX_RETRY_COUNT
+                        );
+
+                    } else {
+
+                        notification.setStatus(NotificationStatus.PENDING);
+
+                        log.warn(
+                                "Notification {} failed. Retry {}/{}",
+                                notification.getId(),
+                                notification.getRetryCount(),
+                                NotificationConstants.MAX_RETRY_COUNT
                         );
                     }
-                    log.error(
-                            "Notification {} permanently failed after {} retries.",
-                            notification.getId(), NotificationConstants.MAX_RETRY_COUNT
-                    );
-                }else {
-                    notification.setStatus(NotificationStatus.PENDING);
-                    log.warn(
-                            "Notification {} failed. Retry {}/{}",
-                            notification.getId(),
-                            notification.getRetryCount(),
-                            NotificationConstants.MAX_RETRY_COUNT
-                    );
+
+                    notification.setErrorMessage(e.getMessage());
+
+                    notificationRepository.save(notification);
                 }
-                notification.setErrorMessage(e.getMessage());
-                notificationRepository.save(notification);
             }
+
+        } finally {
+
+            redisLockService.releaseLock(
+                    RedisConstants.NOTIFICATION_LOCK,
+                    ownerId
+            );
         }
     }
 }
