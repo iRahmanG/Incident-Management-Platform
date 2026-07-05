@@ -54,4 +54,7 @@ public class Notification {
     private LocalDateTime createdAt;
 
     private LocalDateTime sentAt;
+
+    @Column(columnDefinition = "TEXT")
+    private String payload;
 }

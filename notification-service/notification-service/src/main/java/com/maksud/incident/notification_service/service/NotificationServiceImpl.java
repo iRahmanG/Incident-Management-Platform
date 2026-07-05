@@ -1,5 +1,6 @@
 package com.maksud.incident.notification_service.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.maksud.incident.notification_service.dto.NotificationResponse;
 import com.maksud.incident.notification_service.dto.NotificationSummaryResponse;
 import com.maksud.incident.notification_service.entity.Notification;
@@ -26,6 +27,7 @@ public class NotificationServiceImpl implements NotificationService{
 
     private final NotificationRepository notificationRepository;
     private final NotificationMapper notificationMapper;
+    private final ObjectMapper objectMapper;
 
     public Page<NotificationSummaryResponse> getAllNotifications(int page, int size, NotificationStatus status, NotificationEventType type) {
         Pageable pageable = PageRequest.of(
@@ -78,6 +80,7 @@ public class NotificationServiceImpl implements NotificationService{
                 .errorMessage(null)
                 .isRead(false)
                 .createdAt(LocalDateTime.now())
+                .payload(serializeEvent(event))
                 .sentAt(null)
                 .build();
 
@@ -97,5 +100,13 @@ public class NotificationServiceImpl implements NotificationService{
                         event.getSeverity(),
                         event.getEventType()
                 );
+    }
+
+    private String serializeEvent(IncidentEvent event) {
+        try {
+            return objectMapper.writeValueAsString(event);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to serialize IncidentEvent", e);
+        }
     }
 }

@@ -1,10 +1,13 @@
 package com.maksud.incident.notification_service.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.maksud.incident.notification_service.constants.NotificationConstants;
 import com.maksud.incident.notification_service.email.EmailService;
 import com.maksud.incident.notification_service.entity.Notification;
 import com.maksud.incident.notification_service.entity.NotificationStatus;
+import com.maksud.incident.notification_service.event.IncidentEvent;
 import com.maksud.incident.notification_service.repository.NotificationRepository;
+import com.maksud.incident.notification_service.kafka.IncidentEventDlqProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -20,6 +23,8 @@ public class NotificationProcessor {
 
     private final NotificationRepository notificationRepository;
     private final EmailService emailService;
+    private final ObjectMapper objectMapper;
+    private final IncidentEventDlqProducer incidentEventDlqProducer;
 
     @Scheduled(fixedDelay = 10000)
     public void processPendingNotifications(){
@@ -47,6 +52,25 @@ public class NotificationProcessor {
                 // Retry
                 if(notification.getRetryCount() >= NotificationConstants.MAX_RETRY_COUNT){
                     notification.setStatus(NotificationStatus.FAILED);
+
+                    try{
+                        IncidentEvent event = objectMapper.readValue(
+                                notification.getPayload(),
+                                IncidentEvent.class
+                        );
+
+                        incidentEventDlqProducer.publish(event);
+                        log.warn(
+                                "Notification {} moved to DLQ",
+                                notification.getId()
+                        );
+                    } catch (Exception ex) {
+                        log.error(
+                                "Unable to publish notification {} to DLQ",
+                                notification.getId(),
+                                ex
+                        );
+                    }
                     log.error(
                             "Notification {} permanently failed after {} retries.",
                             notification.getId(), NotificationConstants.MAX_RETRY_COUNT
