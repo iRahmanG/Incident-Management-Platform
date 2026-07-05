@@ -1,5 +1,6 @@
 package com.maksud.incident.incident_service.service;
 
+import com.maksud.incident.incident_service.constants.CacheConstants;
 import com.maksud.incident.incident_service.dto.CreateIncidentRequest;
 import com.maksud.incident.incident_service.dto.IncidentEvent;
 import com.maksud.incident.incident_service.dto.IncidentResponse;
@@ -13,6 +14,8 @@ import com.maksud.incident.incident_service.mapper.IncidentMapper;
 import com.maksud.incident.incident_service.repository.IncidentRepository;
 import com.maksud.incident.incident_service.security.UserContext;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -26,12 +29,14 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class IncidentServiceImpl implements IncidentService{
 
     private final IncidentRepository incidentRepository;
     private final IncidentMapper incidentMapper;
     private final UserContext userContext;
     private final KafkaProducerService producer;
+    private final RedisService redisService;
 
     @Override
     public IncidentResponse createIncident(CreateIncidentRequest request, UUID createdBy) {
@@ -183,6 +188,10 @@ public class IncidentServiceImpl implements IncidentService{
         incident.setUpdatedAt(LocalDateTime.now());
 
         Incident saved = incidentRepository.save(incident);
+
+        redisService.delete(
+                CacheConstants.INCIDENT_CACHE_PREFIX + incident.getId()
+        );
         return incidentMapper.toResponse(saved);
     }
 
@@ -216,10 +225,37 @@ public class IncidentServiceImpl implements IncidentService{
     }
 
     @Override
-    public IncidentResponse getIncidentById(UUID incidentId) {
-        Incident incident = incidentRepository.findById(incidentId).orElseThrow(() ->
-                new IncidentNotFoundException("Incident not found with id: " + incidentId)
-                );
-        return incidentMapper.toResponse(incident);
+    public IncidentResponse getIncidentById(UUID id) {
+
+        String cacheKey =
+                CacheConstants.INCIDENT_CACHE_PREFIX + id;
+
+        var cachedIncident =
+                redisService.get(cacheKey, IncidentResponse.class);
+
+        if (cachedIncident.isPresent()) {
+            log.info("Fetching incident {} from Redis", id);
+            return cachedIncident.get();
+        }
+
+        log.info("Fetching incident {} from database", id);
+
+        Incident incident =
+                incidentRepository.findById(id)
+                        .orElseThrow(() ->
+                                new IncidentNotFoundException(
+                                        "Incident not found with id : " + id
+                                ));
+
+        IncidentResponse response =
+                incidentMapper.toResponse(incident);
+
+        redisService.save(
+                cacheKey,
+                response,
+                CacheConstants.INCIDENT_CACHE_TTL
+        );
+
+        return response;
     }
 }
