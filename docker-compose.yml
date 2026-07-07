@@ -1,0 +1,278 @@
+services:
+
+  # -----------------------------
+  # Infrastructure
+  # -----------------------------
+
+  postgres-auth:
+    image: postgres:16
+    container_name: postgres-auth
+    environment:
+      POSTGRES_DB: ${AUTH_DB_NAME}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-auth-data:/var/lib/postgresql/data
+    networks:
+      - incident-network
+
+  postgres-incident:
+    image: postgres:16
+    container_name: postgres-incident
+    environment:
+      POSTGRES_DB: ${INCIDENT_DB_NAME}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-incident-data:/var/lib/postgresql/data
+    networks:
+      - incident-network
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - incident-network
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.1
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"
+    restart: unless-stopped
+    networks:
+      - incident-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    restart: unless-stopped
+    networks:
+      - incident-network
+
+
+  # -----------------------------
+  # Config Server
+  # -----------------------------
+
+  config-server:
+    build:
+      context: ./config-server
+      dockerfile: Dockerfile
+
+    container_name: config-server
+
+    ports:
+      - "8888:8888"
+
+    environment:
+      CONFIG_REPO_URI: ${CONFIG_REPO_URI}
+      CONFIG_REPO_USERNAME: ${CONFIG_REPO_USERNAME}
+      CONFIG_REPO_PASSWORD: ${CONFIG_REPO_PASSWORD}
+
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+    restart: unless-stopped
+
+    networks:
+      - incident-network
+
+
+  # -----------------------------
+  # Eureka
+  # -----------------------------
+
+  eureka-server:
+
+    build:
+      context: ./eureka-server
+      dockerfile: Dockerfile
+
+    container_name: eureka-server
+
+    ports:
+      - "8761:8761"
+
+    depends_on:
+      config-server:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+    restart: unless-stopped
+
+    networks:
+      - incident-network
+
+
+  # -----------------------------
+  # API Gateway
+  # -----------------------------
+
+  api-gateway:
+
+    build:
+      context: ./api-gateway
+
+    container_name: api-gateway
+
+    ports:
+      - "9090:9090"
+
+    depends_on:
+      config-server:
+        condition: service_healthy
+
+      eureka-server:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+    networks:
+      - incident-network
+
+
+  # -----------------------------
+  # Auth Service
+  # -----------------------------
+
+  auth-service:
+
+    build:
+      context: ./auth-service
+
+    container_name: auth-service
+
+    ports:
+      - "8081:8081"
+
+    depends_on:
+      config-server:
+        condition: service_healthy
+
+      eureka-server:
+        condition: service_healthy
+
+      postgres-auth:
+        condition: service_started
+
+    restart: unless-stopped
+
+    networks:
+      - incident-network
+
+
+  # -----------------------------
+  # Incident Service
+  # -----------------------------
+
+  incident-service:
+
+    build:
+      context: ./incident-service
+
+    container_name: incident-service
+
+    ports:
+      - "8082:8082"
+
+    depends_on:
+      config-server:
+        condition: service_healthy
+
+      eureka-server:
+        condition: service_healthy
+
+      postgres-incident:
+        condition: service_started
+
+      kafka:
+        condition: service_started
+
+      redis:
+        condition: service_started
+
+    restart: unless-stopped
+
+    networks:
+      - incident-network
+
+
+  # -----------------------------
+  # Notification Service
+  # -----------------------------
+
+  notification-service:
+
+    build:
+      context: ./notification-service
+
+    container_name: notification-service
+
+    ports:
+      - "8083:8083"
+
+    depends_on:
+      config-server:
+        condition: service_healthy
+
+      eureka-server:
+        condition: service_healthy
+
+      kafka:
+        condition: service_started
+
+      redis:
+        condition: service_started
+
+    restart: unless-stopped
+
+    networks:
+      - incident-network
+
+
+networks:
+  incident-network:
+    driver: bridge
+
+volumes:
+  postgres-auth-data:
+  postgres-incident-data:
